@@ -1,0 +1,41 @@
+# using the boto3 library to schedule non-production instances to stop at a specific time
+# stop all instances that are tagged with key:value Environment:non-prod and are in running state at 10:00 PM
+# You can schedule this script to run automatically at a specific time using AWS Lambda or using cron jobs on an EC2 instance or a local machine
+
+import boto3
+import datetime
+
+# Initialize the EC2 client
+ec2 = boto3.client('ec2')
+
+# Define the tag key and value for the non-production instances
+tag_key = 'Environment'
+tag_value = 'non-prod'
+
+# Define the time to stop the instances
+stop_time = datetime.time(22, 0) # 10:00 PM
+
+# Get the list of non-production instances
+response = ec2.describe_instances(
+    Filters=[
+        {
+            'Name': 'tag:' + tag_key,
+            'Values': [tag_value]
+        },
+        {
+            'Name': 'instance-state-name',
+            'Values': ['running']
+        }
+    ]
+)
+
+# Extract the instance IDs
+instance_ids = [instance['InstanceId'] for reservation in response['Reservations'] for instance in reservation['Instances']]
+
+# Stop the instances
+if instance_ids:
+    ec2.stop_instances(InstanceIds=instance_ids)
+    print(f'Instances {instance_ids} will be stopped at {stop_time}')
+else:
+    print('No non-production instances found')
+
